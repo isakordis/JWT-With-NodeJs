@@ -1,42 +1,56 @@
-const router = require('express').Router();
-const User = require('../models/User');
-const {registerValidation,loginValidation}=require('../validation');
-const bcrypt = require('bcryptjs');
+const router = require("express").Router();
+const User = require("../models/User");
+// const {registerValidation,loginValidation}=require('../validation');
+const bcrypt = require("bcryptjs");
 
+router.post("/register", async (req, res) => {
+  // const {error}=registerValidation(req.body);
+  // if(error) return res.status(400).send(error.deta);
 
-router.post('/register', async (req, res) => {
+  // //Check if the user already in db
+  const emailExist = await User.findOne({ email: req.body.email });
 
+  if (emailExist) return res.status(400).send("Email already");
 
-    // const {error}=registerValidation(req.body);
-    // if(error) return res.status(400).send(error.deta);
+  //Hash pass
 
-    // //Check if the user already in db
-    const emailExist=await User.findOne({email:req.body.email});
+  const salt = 10;
+  const hashPass = await bcrypt.hash(req.body.password, salt);
 
-    if(emailExist) return res.status(400).send('Email already');
+  //Create new user
+  const user = new User({
+    name: req.body.name,
+    email: req.body.email,
+    password: hashPass
+  });
+  try {
+    const savedUser = await user.save();
+    res.send({ user: user._id });
+    console.log(user._id);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+});
 
+//LOGIN
 
-    //Hash pass
+router.post("/login", async (req, res) => {
+  // const{error}=loginValidation(req.body);
+  // if(error) return res.status(400).send(error);
 
-    const salt = 10;
-    const hashPass=await bcrypt.hash(req.body.password,salt);
+  //Check if the user is already in DB
 
+  const emailExist = await User.findOne({ email: req.body.email });
+  if (!emailExist) return res.status(400).send("EMail is wrong");
 
-    //Create new user
-    const user = new User({
+  //Password is Correct
+ 
+  const passValid = await bcrypt.compare(req.body.password, user.password);
 
-        name: req.body.name,
-        email: req.body.email,
-        password: hashPass,
+  if (!passValid) return res.status(400).send("Pass is wrong");
 
-    });
-    try {
-        const savedUser = await user.save();
-        res.send(savedUser);
-
-    } catch (error) {
-        res.status(400).send(error);
-    }
+  res.send("Success");
+  console.log("Success");
 });
 
 module.exports = router;
